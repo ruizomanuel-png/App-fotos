@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+
+# Lotes procesados y sus archivos temporales
+data/
+
+# Look calibrado: es tuyo y depende de tus pares antes/despues
+config/learned.yaml
+
+.pytest_cache/
+.DS_Store

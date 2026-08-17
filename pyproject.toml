@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hdrpipe"
+version = "0.1.0"
+description = "Edicion automatica de fotografia HDR inmobiliaria a partir de brackets RAW"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9",
+    "rawpy>=0.19",
+    "ExifRead>=3.0",
+    "Pillow>=10.0",
+    "scipy>=1.11",
+    "PyYAML>=6.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+# Borrado automatico de personas / mascotas / coches.
+# Pesa (arrastra torch), pero es gratis y en el M3 corre sobre la GPU via MPS.
+# Sin este extra el resto del pipeline funciona igual, solo que no borra objetos.
+ai = ["ultralytics>=8.2", "simple-lama-inpainting>=0.1.2"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+hdrpipe = "hdrpipe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hdrpipe*", "webapp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

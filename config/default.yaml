@@ -1,0 +1,178 @@
+# Parametros por defecto del pipeline.
+#
+# Todo lo que se puede tocar sin reescribir codigo vive aqui.
+# `hdrpipe calibrate` escribe encima de estos valores en config/learned.yaml
+# a partir de tus pares antes/despues de Lightroom.
+
+raw:
+  # Balance de blancos de camara como punto de partida (luego se corrige solo).
+  use_camera_wb: true
+  # Interpolacion del demosaico. AHD es buen equilibrio calidad/velocidad.
+  demosaic: AHD
+  # Reduce el lado largo antes de procesar. null = resolucion completa.
+  # Util para pruebas rapidas; ponlo a null para produccion.
+  working_max_side: null
+
+grouping:
+  # Numero de tomas por escena.
+  bracket_size: 3
+  # Segundos maximos entre disparos para considerarlos el mismo bracket.
+  max_seconds_between_shots: 8.0
+
+align:
+  enabled: true
+  # Con tripode el desplazamiento es minimo; por encima de esto asumimos que
+  # la alineacion ha fallado y se descarta en lugar de deformar la foto.
+  max_shift_px: 40
+  # Resolucion a la que se estima el desplazamiento (rapido y estable).
+  estimate_max_side: 1200
+
+merge:
+  # radiance = fusion fisica usando los tiempos de exposicion del EXIF (recomendado).
+  # fusion   = exposure fusion de Mertens, sin EXIF. Se usa solo como red de seguridad.
+  mode: radiance
+  # Zona util de cada toma: por debajo es ruido, por encima esta quemado.
+  low_cut: 0.005
+  high_cut: 0.985
+
+geometry:
+  # Correccion de distorsion de lente por modelo de objetivo (EXIF LensModel).
+  # Ver README: se calibra una vez por objetivo y ya queda puesto.
+  lens_profiles: {}
+  # Enderezado de horizonte a partir de las lineas horizontales dominantes.
+  straighten:
+    enabled: true
+    max_degrees: 4.0
+  # Verticales rectas (paredes que no se caen).
+  verticals:
+    enabled: true
+    # 1.0 = correccion total. Los profesionales rara vez van al 100%:
+    # dejar un resto de perspectiva se ve mas natural.
+    strength: 0.85
+    # Por encima de esta inclinacion la escena es rara (camara apuntando al
+    # techo) y se deja sin corregir. El guardian que de verdad decide es el
+    # recorte maximo de mas abajo: corregir mucho obliga a recortar mucho.
+    max_degrees: 18.0
+    min_lines: 6
+  # Recorte automatico tras enderezar, conservando el encuadre original.
+  autocrop:
+    enabled: true
+    # Si hay que recortar mas de esto para eliminar bordes vacios -> a revisar.
+    max_area_loss: 0.22
+
+white_balance:
+  enabled: true
+  # Cuanto se corrige hacia neutro: 1.0 = neutro clinico, 0.0 = sin tocar.
+  strength: 0.8
+  # Correccion separada para interior (calido) y ventanas (frio).
+  # Es lo que evita que el salon quede naranja y la ventana azul.
+  split_mixed_cast:
+    enabled: true
+    strength: 0.55
+  # Deja un resto de calidez: una casa totalmente neutra se ve fria y hostil.
+  keep_warmth: 0.12
+
+tone:
+  # Luminancia media objetivo del interior (0-1, en espacio de pantalla).
+  target_midtone: 0.46
+  # Percentil que se considera "el interior" (excluye ventanas).
+  midtone_percentile: 55
+  # Recuperacion de ventanas: paradas de exposicion que se bajan dentro de la
+  # mascara de ventana. Es el "window pull".
+  window_pull:
+    enabled: true
+    # Tope de correccion. La cantidad real se calcula por foto: una ventana
+    # apenas quemada recibe menos paradas que una a contraluz directo.
+    ev: 2.4
+    # Tono al que se lleva la parte alta de la ventana (0-1, espacio pantalla).
+    target: 0.82
+    # Que cuenta como ventana: lo que esta entre 2.0 y 3.5 paradas por encima
+    # del nivel del interior. En paradas y no en percentiles, porque una ventana
+    # puede ocupar el 2% de una foto y el 30% de la siguiente.
+    stops_above_interior: [2.0, 3.5]
+    # Radio del guided filter en fraccion del lado corto. Evita halos.
+    feather: 0.02
+    # Contraste local dentro de la ventana para que se vea el paisaje.
+    local_contrast: 0.35
+  shadows:
+    enabled: true
+    ev: 0.9
+    target: 0.16
+    # Que cuenta como sombra: lo que esta entre 1.6 y 3.2 paradas por debajo
+    # del nivel del interior.
+    stops_below_interior: [1.6, 3.2]
+    feather: 0.03
+  # Punto blanco de la curva filmica. Mas alto = mas suave en altas luces.
+  highlight_rolloff: 2.2
+
+grade:
+  # Curva en S. Si has calibrado con tus pares, esto lo sustituye la LUT aprendida.
+  contrast: 0.14
+  black_point: 0.012
+  white_point: 0.995
+  vibrance: 0.16
+  saturation: 1.03
+  clarity: 0.12
+  # Realces por rango de color.
+  targeted:
+    # Cesped y vegetacion.
+    grass:
+      enabled: true
+      hue_center: 95      # grados en rueda HSV (verde)
+      hue_width: 45
+      saturation: 1.18
+      luminance: 1.06
+      hue_shift: -4       # hacia verde-amarillo, mas sano
+    # Agua: piscinas y cielo visto por la ventana.
+    water:
+      enabled: true
+      hue_center: 205     # cian-azul
+      hue_width: 40
+      saturation: 1.12
+      luminance: 1.0
+      hue_shift: 0
+
+detail:
+  chroma_denoise: 0.5
+  luma_denoise: 0.25
+  sharpen:
+    amount: 0.55
+    radius: 1.1
+    # No enfocar zonas planas (paredes, cielo): evita marcar el ruido.
+    edge_threshold: 0.02
+
+cleanup:
+  # Borrado automatico de personas, mascotas y coches.
+  enabled: true
+  classes: [person, dog, cat, bird, horse, car, motorcycle, bicycle]
+  # Confianza minima de deteccion.
+  confidence: 0.35
+  # Margen alrededor del objeto detectado, en fraccion del lado del objeto.
+  mask_dilate: 0.12
+  # Si el objeto ocupa mas de esto, borrarlo dejaria un agujero enorme:
+  # la foto se manda a revisar en lugar de inventarse medio salon.
+  max_object_area: 0.06
+
+batch:
+  # Consistencia dentro del lote: acerca cada foto al consenso del lote.
+  # 0 = cada foto por su cuenta, 1 = todas identicas en tono y color.
+  consistency: 0.45
+
+quality:
+  # Controles que mandan una foto a la carpeta "revisar/".
+  blur_threshold: 45.0          # varianza del laplaciano
+  max_clipped_highlights: 0.045 # fraccion de pixeles quemados tras editar
+  max_clipped_shadows: 0.030
+  min_brackets: 3
+
+output:
+  format: jpeg
+  quality: 94
+  # Lado largo en pixeles. null = resolucion original.
+  max_long_side: 3600
+  color_space: sRGB
+  subsampling: "4:4:4"
+
+retention:
+  # Los trabajos y sus archivos se borran solos pasado este tiempo.
+  days: 7
