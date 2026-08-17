@@ -39,15 +39,28 @@ if [ ! -d .venv ]; then
     python3 -m venv .venv || { echo "${ROJO}No se pudo crear el entorno.${FIN}"; read -r; exit 1; }
 fi
 
-# shellcheck disable=SC1091
-source .venv/bin/activate
+# Todo se invoca por ruta absoluta, sin depender del PATH ni de `activate`.
+PYTHON="$(pwd)/.venv/bin/python"
+HDRPIPE="$(pwd)/.venv/bin/hdrpipe"
 
-if ! python -c "import hdrpipe" >/dev/null 2>&1; then
-    echo "Instalando dependencias..."
-    pip install --quiet --upgrade pip
-    if ! pip install --quiet -e .; then
+# Se comprueba que exista el ejecutable, no que el paquete se pueda importar.
+# El import enganaba: estamos dentro de la carpeta del proyecto, donde hay un
+# directorio llamado `hdrpipe/`, asi que `import hdrpipe` funciona aunque no se
+# haya instalado nada -- y luego el comando no existe.
+if [ ! -x "$HDRPIPE" ]; then
+    echo "Instalando dependencias. La primera vez tarda un par de minutos..."
+    "$PYTHON" -m pip install --quiet --upgrade pip
+    if ! "$PYTHON" -m pip install --quiet -e .; then
         echo ""
-        echo "${ROJO}Fallo la instalacion.${FIN} Arriba tienes el motivo."
+        echo "${ROJO}Fallo la instalacion.${FIN} El motivo esta en las lineas de arriba."
+        read -r -p "Pulsa Enter para cerrar."
+        exit 1
+    fi
+    if [ ! -x "$HDRPIPE" ]; then
+        echo ""
+        echo "${ROJO}La instalacion termino pero falta el comando hdrpipe.${FIN}"
+        echo "Prueba a borrar la carpeta .venv y volver a abrir la app:"
+        echo "  rm -rf '$(pwd)/.venv'"
         read -r -p "Pulsa Enter para cerrar."
         exit 1
     fi
@@ -69,20 +82,49 @@ fi
 
 # --- Arranque ---------------------------------------------------------------
 
-# La direccion la imprime `hdrpipe serve`; aqui solo se recuerda como salir.
-echo "${GRIS}Para cerrar la app: cierra esta ventana o pulsa Control+C${FIN}"
+DIRECCION="http://127.0.0.1:${PUERTO}"
+
+echo "  Direccion de la app:  ${VERDE}${DIRECCION}${FIN}"
+echo "  ${GRIS}Si el navegador no se abre solo, copia esa direccion en Safari o Chrome.${FIN}"
+echo "  ${GRIS}Para cerrar la app: cierra esta ventana o pulsa Control+C${FIN}"
 echo ""
+echo -n "Arrancando"
 
 # Se espera a que el servidor responda antes de abrir el navegador, para no
-# encontrarse un "no se puede conectar" en la primera carga.
+# encontrarse un "no se puede conectar" en la primera carga. El primer arranque
+# carga OpenCV y LibRaw, que en frio tardan lo suyo, de ahi el margen amplio.
 (
-    for _ in $(seq 1 40); do
-        if curl -s -o /dev/null "http://127.0.0.1:${PUERTO}/"; then
-            open "http://127.0.0.1:${PUERTO}"
+    for _ in $(seq 1 120); do
+        if curl -s -o /dev/null --max-time 2 "${DIRECCION}/"; then
+            echo ""
+            echo "${VERDE}Lista.${FIN} Abriendo el navegador..."
+            open "${DIRECCION}" || {
+                echo "${ROJO}No se pudo abrir el navegador solo.${FIN}"
+                echo "Entra tu a mano en:  ${DIRECCION}"
+            }
             exit 0
         fi
-        sleep 0.5
+        echo -n "."
+        sleep 1
     done
+    echo ""
+    echo "${ROJO}El servidor no ha respondido en dos minutos.${FIN}"
+    echo "Mira si hay algun error mas abajo en esta misma ventana."
 ) &
+ESPERA=$!
 
-exec hdrpipe serve --puerto "$PUERTO"
+# Sin `exec`: si el arranque falla, el shell sigue vivo para poder contarlo.
+# Con `exec`, la ventana de Terminal se cerraria de golpe sin mostrar nada.
+"$HDRPIPE" serve --puerto "$PUERTO"
+CODIGO=$?
+
+kill "$ESPERA" 2>/dev/null
+
+# Control+C devuelve 130: eso es un cierre normal, no un fallo.
+if [ "$CODIGO" -ne 0 ] && [ "$CODIGO" -ne 130 ]; then
+    echo ""
+    echo "${ROJO}La app se ha cerrado con un error (codigo $CODIGO).${FIN}"
+    echo "El motivo esta en las lineas de arriba."
+    echo ""
+    read -r -p "Pulsa Enter para cerrar esta ventana."
+fi
