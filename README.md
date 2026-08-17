@@ -8,15 +8,28 @@ Corre entero en tu MacBook. Sin servidor, sin cuentas, sin coste.
 
 ---
 
-## Instalación
+## Instalación (macOS)
 
-Requiere Python 3.10 o superior.
+Una sola vez, en la app **Terminal**:
 
 ```bash
-git clone <este repositorio> && cd App-fotos
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+cd ~/Documents
+git clone https://github.com/ruizomanuel-png/App-fotos.git
+cd App-fotos
+git checkout claude/hdr-real-estate-photo-app-wu0b0c
 ```
+
+A partir de ahí, **doble clic en `abrir-app.command`** dentro de la carpeta.
+La primera vez prepara el entorno solo (un par de minutos) y luego abre el
+navegador. Las siguientes, arranca en segundos.
+
+Si macOS avisa de que no puede verificar el desarrollador: clic derecho sobre
+el archivo → Abrir → Abrir. Solo hace falta la primera vez.
+
+Requiere Python 3.10 o superior. Si no lo tienes, el lanzador te lo dice y te
+indica cómo instalarlo (`xcode-select --install`, gratis).
+
+### Borrado de objetos (opcional)
 
 Para activar el borrado automático de personas, mascotas y coches (opcional,
 descarga ~2 GB y usa la GPU del M3 vía MPS):
@@ -30,9 +43,11 @@ anota en el informe.
 
 ## Uso
 
-**App web** — la vía normal:
+**App web** — la vía normal: doble clic en `abrir-app.command`, o desde la
+terminal con el entorno activado:
 
 ```bash
+source .venv/bin/activate
 hdrpipe serve      # abre http://127.0.0.1:8000
 ```
 
